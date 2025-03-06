@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Calc with Login</title>
+  <style>
+    /* Базовые стили для формы логина и калькулятора */
+    #login-section, #calc-section {
+      margin: 20px;
+    }
+    #calc-section {
+      display: none;
+    }
+    #history {
+      margin-top: 20px;
+      border: 1px solid #ccc;
+      padding: 10px;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+<!-- Секция логина -->
+<div id="login-section">
+  <h2>Логин</h2>
+  <label for="username">Имя пользователя:</label>
+  <input id="username" type="text">
+  <br>
+  <label for="password">Пароль:</label>
+  <input id="password" type="password">
+  <br>
+  <button onclick="login()">Войти</button>
+  <div id="login-error" style="color: red;"></div>
+</div>
+
+<!-- Секция калькулятора -->
+<div id="calc-section">
+  <h2>Калькулятор</h2>
+  <div>
+    Добро пожаловать, <span id="user-display"></span>!
+    <button onclick="logout()">Выйти</button>
+  </div>
+  <input id="display" readonly>
+  <br>
+  <button onclick="append('7')">7</button>
+  <button onclick="append('8')">8</button>
+  <button onclick="append('9')">9</button>
+  <button onclick="append('/')">/</button>
+  <br>
+  <button onclick="append('4')">4</button>
+  <button onclick="append('5')">5</button>
+  <button onclick="append('6')">6</button>
+  <button onclick="append('*')">*</button>
+  <br>
+  <button onclick="append('1')">1</button>
+  <button onclick="append('2')">2</button>
+  <button onclick="append('3')">3</button>
+  <button onclick="append('-')">-</button>
+  <br>
+  <button onclick="append('0')">0</button>
+  <button onclick="append('.')">.</button>
+  <button onclick="calculate()">=</button>
+  <button onclick="append('+')">+</button>
+  <br>
+  <button onclick="clearDisplay()">C</button>
+
+  <!-- История вычислений -->
+  <div id="history">
+    <h3>История</h3>
+    <ul id="history-list"></ul>
+  </div>
+</div>
+
+<script>
+  // Простой "база данных" пользователей (для примера)
+  const users = {
+    'user': 'password'
+  };
+
+  // Текущий пользователь
+  let currentUser = null;
+
+  function login() {
+    const usernameInput = document.getElementById('username').value;
+    const passwordInput = document.getElementById('password').value;
+    const errorDiv = document.getElementById('login-error');
+
+    if (users[usernameInput] && users[usernameInput] === passwordInput) {
+      currentUser = usernameInput;
+      document.getElementById('login-section').style.display = 'none';
+      document.getElementById('calc-section').style.display = 'block';
+      document.getElementById('user-display').textContent = currentUser;
+      loadHistory();
+    } else {
+      errorDiv.textContent = 'Неверное имя пользователя или пароль.';
+    }
+  }
+
+  function logout() {
+    currentUser = null;
+    document.getElementById('login-section').style.display = 'block';
+    document.getElementById('calc-section').style.display = 'none';
+    document.getElementById('username').value = '';
+    document.getElementById('password').value = '';
+  }
+
+  let display = document.getElementById('display');
+
+  function append(value) {
+    display.value += value;
+  }
+
+  function calculateExpression(expr) {
+    return Function('"use strict";return (' + expr + ')')();
+  }
+
+  function calculate() {
+    try {
+      let result = calculateExpression(display.value);
+      // Сохраняем вычисление в истории текущего пользователя
+      saveHistory(display.value + " = " + result);
+      display.value = result;
+    } catch (e) {
+      display.value = 'Error';
+    }
+  }
+
+  function clearDisplay() {
+    display.value = '';
+  }
+
+  // Функции для работы с историей (используем localStorage)
+  function saveHistory(entry) {
+    if (!currentUser) return;
+    let historyKey = 'calc_history_' + currentUser;
+    let history = JSON.parse(localStorage.getItem(historyKey)) || [];
+    history.push(entry);
+    localStorage.setItem(historyKey, JSON.stringify(history));
+    updateHistoryList(history);
+  }
+
+  function loadHistory() {
+    if (!currentUser) return;
+    let historyKey = 'calc_history_' + currentUser;
+    let history = JSON.parse(localStorage.getItem(historyKey)) || [];
+    updateHistoryList(history);
+  }
+
+  function updateHistoryList(history) {
+    const historyList = document.getElementById('history-list');
+    historyList.innerHTML = '';
+    history.forEach(item => {
+      let li = document.createElement('li');
+      li.textContent = item;
+      historyList.appendChild(li);
+    });
+  }
+</script>
+</body>
+</html>

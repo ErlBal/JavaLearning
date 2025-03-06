@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Math Test</title>
+    <style>
+        .hidden {
+            display: none;
+        }
+        .auth-form {
+            border: 1px solid #ccc;
+            padding: 20px;
+            width: 300px;
+            margin: 20px auto;
+        }
+        .error-message {
+            color: red;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+<!-- Форма входа -->
+<div id="loginForm" class="auth-form">
+    <h3>Login</h3>
+    <input type="text" id="loginUsername" placeholder="Username">
+    <input type="password" id="loginPassword" placeholder="Password">
+    <p class="error-message" id="loginError"></p>
+    <button onclick="login()">Login</button>
+    <button onclick="showRegisterForm()">Register</button>
+</div>
+
+<!-- Форма регистрации -->
+<div id="registerForm" class="auth-form hidden">
+    <h3>Register</h3>
+    <input type="text" id="regUsername" placeholder="Username">
+    <input type="password" id="regPassword" placeholder="Password">
+    <input type="password" id="regConfirmPassword" placeholder="Confirm Password">
+    <p class="error-message" id="regError"></p>
+    <button onclick="register()">Register</button>
+    <button onclick="showLoginForm()">Back to Login</button>
+</div>
+
+<!-- Математический тест -->
+<div id="testDiv" class="hidden">
+    <h2>Math Test</h2>
+    <p id="answers"></p>
+    <p id="display"></p>
+    <input id="inputvalue" type="number">
+    <p id="result"></p>
+    <button id="ok" onclick="checkResult()">OK</button>
+    <button id="next" onclick="generate()">Next</button>
+    <button onclick="logout()">Logout</button>
+</div>
+
+<script>
+    let correctResult;
+    let correct = 0;
+    let incorrect = 0;
+    let questions = 0;
+    let currentUser = null;
+
+    // Инициализация хранилища
+    if (!localStorage.getItem('users')) {
+        localStorage.setItem('users', JSON.stringify({}));
+    }
+
+    function showLoginForm() {
+        document.getElementById('registerForm').classList.add('hidden');
+        document.getElementById('loginForm').classList.remove('hidden');
+        document.getElementById('testDiv').classList.add('hidden');
+        clearErrors();
+    }
+
+    function showRegisterForm() {
+        document.getElementById('loginForm').classList.add('hidden');
+        document.getElementById('registerForm').classList.remove('hidden');
+        document.getElementById('testDiv').classList.add('hidden');
+        clearErrors();
+    }
+
+    function clearErrors() {
+        document.getElementById('loginError').textContent = '';
+        document.getElementById('regError').textContent = '';
+    }
+
+    function login() {
+        const username = document.getElementById('loginUsername').value;
+        const password = document.getElementById('loginPassword').value;
+        const users = JSON.parse(localStorage.getItem('users'));
+
+        if (!username || !password) {
+            document.getElementById('loginError').textContent = 'Please fill all fields';
+            return;
+        }
+
+        if (!users[username]) {
+            document.getElementById('loginError').textContent = 'User not found';
+            return;
+        }
+
+        if (users[username].password !== password) {
+            document.getElementById('loginError').textContent = 'Invalid password';
+            return;
+        }
+
+        currentUser = username;
+        showTest();
+        generate();
+    }
+
+    function register() {
+        const username = document.getElementById('regUsername').value;
+        const password = document.getElementById('regPassword').value;
+        const confirmPassword = document.getElementById('regConfirmPassword').value;
+        const users = JSON.parse(localStorage.getItem('users'));
+
+        if (!username || !password || !confirmPassword) {
+            document.getElementById('regError').textContent = 'Please fill all fields';
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            document.getElementById('regError').textContent = 'Passwords do not match';
+            return;
+        }
+
+        if (users[username]) {
+            document.getElementById('regError').textContent = 'Username already exists';
+            return;
+        }
+
+        users[username] = {
+            password: password,
+            stats: {
+                questions: 0,
+                correct: 0,
+                incorrect: 0
+            }
+        };
+        localStorage.setItem('users', JSON.stringify(users));
+
+        currentUser = username;
+        showTest();
+        generate();
+    }
+
+    function showTest() {
+        document.getElementById('loginForm').classList.add('hidden');
+        document.getElementById('registerForm').classList.add('hidden');
+        document.getElementById('testDiv').classList.remove('hidden');
+        clearAuthFields();
+    }
+
+    function clearAuthFields() {
+        document.getElementById('loginUsername').value = '';
+        document.getElementById('loginPassword').value = '';
+        document.getElementById('regUsername').value = '';
+        document.getElementById('regPassword').value = '';
+        document.getElementById('regConfirmPassword').value = '';
+        clearErrors();
+    }
+
+    function logout() {
+        saveStats();
+        currentUser = null;
+        showLoginForm();
+        resetTest();
+    }
+
+    function generate(){
+        saveStats();
+        questions += 1;
+        document.getElementById("result").innerHTML="";
+        document.getElementById("inputvalue").value="";
+        let v1 = Math.round(Math.random()*100);
+        let v2 = Math.round(Math.random()*100);
+        correctResult = v1 + v2;
+        document.getElementById("display").innerHTML = v1 +  "+" + v2 + "= ?";
+        updateStats();
+    }
+
+    function checkResult() {
+        let inputValue = document.getElementById("inputvalue").value;
+        if (inputValue == correctResult) {
+            document.getElementById("result").innerHTML = "<h3>Correct</h3>";
+            correct += 1;
+            generate();
+        } else {
+            document.getElementById("result").innerHTML = "<h3>Incorrect</h3>";
+            incorrect += 1;
+        }
+        updateStats();
+    }
+
+    function updateStats() {
+        document.getElementById("answers").innerHTML =
+            `<h5>Questions: ${questions}</h5>
+         <h5>Correct: ${correct}</h5>
+         <h5>Incorrect: ${incorrect}</h5>`;
+    }
+
+    function saveStats() {
+        if (currentUser) {
+            const users = JSON.parse(localStorage.getItem('users'));
+            users[currentUser].stats = {
+                questions: questions,
+                correct: correct,
+                incorrect: incorrect
+            };
+            localStorage.setItem('users', JSON.stringify(users));
+        }
+    }
+
+    function loadStats() {
+        if (currentUser) {
+            const users = JSON.parse(localStorage.getItem('users'));
+            const stats = users[currentUser].stats;
+            questions = stats.questions;
+            correct = stats.correct;
+            incorrect = stats.incorrect;
+            updateStats();
+        }
+    }
+
+    function resetTest() {
+        questions = 0;
+        correct = 0;
+        incorrect = 0;
+        updateStats();
+    }
+
+    // Инициализация
+    showLoginForm();
+</script>
+</body>
+</html>
